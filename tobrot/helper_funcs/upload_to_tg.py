@@ -12,7 +12,7 @@ logging.getLogger("pyrogram").setLevel(logging.WARNING)
 LOGGER = logging.getLogger(__name__)
 
 import asyncio
-import pyrogram
+import pyrogram.types as pyrogram
 import os
 import time
 import subprocess
@@ -39,7 +39,7 @@ from tobrot import (
     UPLOAD_AS_DOC
 )
 
-from pyrogram import (
+from pyrogram.types import (
     InputMediaDocument,
     InputMediaVideo,
     InputMediaAudio
@@ -144,7 +144,7 @@ async def upload_to_gdrive(file_upload, message, messa_ge, g_id):
         fole.write(f"{RCLONE_CONFIG}")
     destination = f'{DESTINATION_FOLDER}'
     if os.path.isfile(file_upload):
-        g_au = ['rclone', 'copy', '--config=/app/rclone.conf', f'/app/{file_upload}', 'DRIVE:'f'{destination}', '-vvv']
+        g_au = ['rclone', 'copy', '--config=/app/rclone.conf', f'/app/{file_upload}', 'DRIVE:'f'{destination}', '-v']
         tmp = await asyncio.create_subprocess_exec(*g_au, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         pro, cess = await tmp.communicate()
         LOGGER.info(pro.decode('utf-8'))
@@ -186,7 +186,7 @@ async def upload_to_gdrive(file_upload, message, messa_ge, g_id):
     else:
         tt= os.path.join(destination, file_upload)
         LOGGER.info(tt)
-        t_am = ['rclone', 'copy', '--config=/app/rclone.conf', f'/app/{file_upload}', 'DRIVE:'f'{tt}', '-vvv']
+        t_am = ['rclone', 'copy', '--config=/app/rclone.conf', f'/app/{file_upload}', 'DRIVE:'f'{tt}', '-v']
         tmp = await asyncio.create_subprocess_exec(*t_am, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
         pro, cess = await tmp.communicate()
         LOGGER.info(pro.decode('utf-8'))
@@ -246,6 +246,10 @@ async def upload_single_file(message, local_file_name, caption_str, from_user, e
     #
     if UPLOAD_AS_DOC.upper() == 'TRUE':
         thumb = None
+        thumb_image_path = None
+        if os.path.exists(thumbnail_location):
+        	thumb_image_path = await copy_file(thumbnail_location, os.path.dirname(os.path.abspath(local_file_name)))
+        	thumb = thumb_image_path
         message_for_progress_display = message
         if not edit_media:
             message_for_progress_display = await message.reply_text("starting upload of {}".format(os.path.basename(local_file_name)))
@@ -267,6 +271,8 @@ async def upload_single_file(message, local_file_name, caption_str, from_user, e
         if message.message_id != message_for_progress_display.message_id:
             await message_for_progress_display.delete()
         os.remove(local_file_name)
+        if thumb is not None:
+        	os.remove(thumb)
     else:
         try:
             message_for_progress_display = message
