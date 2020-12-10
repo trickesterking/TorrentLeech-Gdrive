@@ -53,35 +53,36 @@ async def status_message_f(client, message):
             downloading_dir_name = str(download.name)
         except:
             pass
-        total_length_size = str(download.total_length_string())
-        progress_percent_string = str(download.progress_string())
-        down_speed_string = str(download.download_speed_string())
-        up_speed_string = str(download.upload_speed_string())
-        download_current_status = str(download.status)
-        e_t_a = str(download.eta_string())
-        current_gid = str(download.gid)
-        #
-        msg += f"<u>{downloading_dir_name}</u>"
-        msg += " | "
-        msg += f"{total_length_size}"
-        msg += " | "
-        msg += f"{progress_percent_string}"
-        msg += " | "
-        msg += f"{DOWNLOAD_ICON} {down_speed_string}"
-        msg += " | "
-        msg += f"{UPLOAD_ICON} {up_speed_string}"
-        msg += " | "
-        msg += f"{e_t_a}"
-        msg += " | "
-        msg += f"{download_current_status}"
-        msg += " | "
-        msg += f"<code>/cancel {current_gid}</code>"
-        msg += " | "
-        msg += "\n\n"
-    LOGGER.info(msg)
+        if download.status == 'active':
+            total_length_size = str(download.total_length_string())
+            progress_percent_string = str(download.progress_string())
+            down_speed_string = str(download.download_speed_string())
+            up_speed_string = str(download.upload_speed_string())
+            download_current_status = str(download.status)
+            e_t_a = str(download.eta_string())
+            current_gid = str(download.gid)
+            #
+            msg += f"<u>{downloading_dir_name}</u>"
+            msg += " | "
+            msg += f"{total_length_size}"
+            msg += " | "
+            msg += f"{progress_percent_string}"
+            msg += " | "
+            msg += f"{DOWNLOAD_ICON} {down_speed_string}"
+            msg += " | "
+            msg += f"{UPLOAD_ICON} {up_speed_string}"
+            msg += " | "
+            msg += f"{e_t_a}"
+            msg += " | "
+            msg += f"{download_current_status}"
+            msg += " | "
+            msg += f"<code>/cancel {current_gid}</code>"
+            msg += " | "
+            msg += "\n\n"
+        #LOGGER.info(msg)
 
-    if msg == "":
-        msg = "🤷‍♂️ No Active, Queued or Paused TORRENTs"
+        if msg == "":
+            msg = "🤷‍♂️ No Active, Queued or Paused TORRENTs"
 
     currentTime = time.strftime("%H:%M:%S", time.gmtime(time.time() - BOT_START_TIME))   #ctrl-c & ctrl-v 😑
     total, used, free = shutil.disk_usage(".")
@@ -93,9 +94,19 @@ async def status_message_f(client, message):
         f"<b>Total disk space</b>: <code>{total}</code>\n" \
         f"<b>Used</b>: <code>{used}</code>\n" \
         f"<b>Free</b>: <code>{free}</code>\n"
+    #LOGGER.info(ms_g)
 
     msg = ms_g + "\n" + msg
-    await message.reply_text(msg, quote=True)
+    LOGGER.info(msg)
+    if len(msg) > MAX_MESSAGE_LENGTH:
+        with io.BytesIO(str.encode(msg)) as out_file:
+            out_file.name = "status.text"
+            await client.send_document(
+                chat_id=message.chat.id,
+                document=out_file,
+            )
+    else:
+        await message.reply_text(msg, quote=True)
 
 async def cancel_message_f(client, message):
     if len(message.command) > 1:
@@ -107,7 +118,7 @@ async def cancel_message_f(client, message):
         try:
             downloads = aria_i_p.get_download(g_id)
             LOGGER.info(downloads)
-            LOGGER.info(downloads.remove(force=True))
+            LOGGER.info(downloads.remove(force=True, files=True))
             await i_m_s_e_g.edit_text(
                 "Leech Cancelled"
             )
@@ -147,16 +158,15 @@ async def exec_message_f(client, message):
         OUTPUT = f"**QUERY:**\n__Command:__\n`{cmd}` \n__PID:__\n`{process.pid}`\n\n**stderr:** \n`{e}`\n**Output:**\n{o}"
 
         if len(OUTPUT) > MAX_MESSAGE_LENGTH:
-            with open("exec.text", "w+", encoding="utf8") as out_file:
-                out_file.write(str(OUTPUT))
-            await client.send_document(
-                chat_id=message.chat.id,
-                document="exec.text",
-                caption=cmd,
-                disable_notification=True,
-                reply_to_message_id=reply_to_id
-            )
-            os.remove("exec.text")
+            with io.BytesIO(str.encode(OUTPUT)) as out_file:
+                out_file.name = "exec.text"
+                await client.send_document(
+                    chat_id=message.chat.id,
+                    document=out_file,
+                    caption=cmd,
+                    disable_notification=True,
+                    reply_to_message_id=reply_to_id
+                )
             await message.delete()
         else:
             await message.reply_text(OUTPUT)
